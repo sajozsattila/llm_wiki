@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # Model name - define once, used by both vllm-mlx and claude
-MODEL="mlx-community/Qwen3.5-9B-MLX-4bit"
+# MODEL="mlx-community/Qwen3.5-9B-MLX-4bit"
 # MODEL="mlx-community/gemma-4-e4b-it-4bit"
+MODEL="mlx-community/Qwopus3.5-9B-v3-4bit"
 
 # Log file location in /tmp (cleared on system reboot)
 LOG_FILE="/tmp/vllm_mlx_$(date +%s).log"
@@ -15,7 +16,7 @@ vllm-mlx serve $MODEL \
   --port 8000 \
   --continuous-batching \
   --enable-auto-tool-choice \
-  --tool-call-parser hermes > "$LOG_FILE" 2>&1 &
+  --tool-call-parser auto > "$LOG_FILE" 2>&1 &
 
 SERVER_PID=$!
 echo "Server PID: $SERVER_PID"
