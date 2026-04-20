@@ -2,6 +2,8 @@ import os
 import re
 from typing import TypedDict
 
+from mlx_vlm import generate as vlm_generate
+from mlx_vlm.prompt_utils import apply_chat_template as vlm_apply_chat_template
 from langgraph.graph import StateGraph, END
 
 from utils import (
@@ -52,6 +54,18 @@ def generate_with_llm(prompt: str) -> str:
             else:
                 response += str(token)
         return response.strip()
+    elif model_data["type"] == "vlm":
+        model = model_data["model"]
+        processor = model_data["processor"]
+        config = model_data["config"]
+
+        if hasattr(config, "seq_len"):
+            max_tokens = min(200, config.seq_len)
+        else:
+            max_tokens = 200
+        prompt_formatted = vlm_apply_chat_template(processor, config, prompt, role="user")
+        result = vlm_generate(model, processor, prompt_formatted, max_tokens=max_tokens)
+        return result.text.strip()
     return "LLM generation not supported for this model type"
 
 
