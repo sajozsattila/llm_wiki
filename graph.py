@@ -5,6 +5,7 @@ from typing import TypedDict
 from mlx_vlm import generate as vlm_generate
 from mlx_vlm.prompt_utils import apply_chat_template as vlm_apply_chat_template
 from langgraph.graph import StateGraph, END
+import json_repair
 
 from utils import (
     WikiState,
@@ -160,6 +161,7 @@ def should_continue_traversal(state: WikiState) -> str:
 def synthesize(state: WikiState) -> WikiState:
     context = state["collected_context"]
     query = state["query"]
+
     if not context:
         return {
             "answer": "No relevant information found in the wiki.",
@@ -167,34 +169,61 @@ def synthesize(state: WikiState) -> WikiState:
             "fallback_needed": True,
             "fallback_reason": "no_context_found",
         }
+
     context_text = "\n\n".join([
-        f"## {c.get('title', c['page'])}\n{c.get('summary', '')}\n" + "\n".join(c.get("relevant", []))
+        f"## {c.get('title', c['page'])}\n{c.get('summary', '')}\n" +
+        "\n".join(c.get("relevant", []))
         for c in context
     ])
-    prompt = f"""Based on the following wiki content, answer the user's question.
+
+    prompt = f"""
+You are a factual QA system.
+
+Answer ONLY using the provided wiki content.
+If insufficient information exists, return has_answer=false.
+
+Return STRICT JSON:
+{{
+  "answer": "...",
+  "has_answer": true | false
+}}
 
 Question: {query}
 
 Wiki Content:
 {context_text}
+"""
 
-Provide a concise answer based on the wiki content above. Cite the sources you used."""
-    answer = generate_with_llm(prompt)
-    sources = list(set([c["page"] for c in context]))
-    
-    no_info_phrase = any(phrase in answer.lower() for phrase in [
-        "does not contain",
-        "no relevant information",
-        "no information found",
-        "no information about",
-    ])
-    fallback_needed = no_info_phrase
-    
+    raw_output = generate_with_llm(prompt)
+
+    # --- Robust JSON repair + parse ---
+    try:
+        parsed = json_repair.loads(raw_output)
+    except Exception:
+        return {
+            "answer": raw_output.strip(),
+            "sources": [c["page"] for c in context],
+            "fallback_needed": True,
+            "fallback_reason": "json_parse_failed",
+        }
+
+    # --- Validate structure ---
+    if not isinstance(parsed, dict) or "has_answer" not in parsed:
+        return {
+            "answer": raw_output.strip(),
+            "sources": [c["page"] for c in context],
+            "fallback_needed": True,
+            "fallback_reason": "invalid_schema",
+        }
+
+    answer = str(parsed.get("answer", "")).strip()
+    has_answer = bool(parsed.get("has_answer", False))
+
     return {
-        "answer": answer, 
-        "sources": sources, 
-        "fallback_needed": fallback_needed,
-        "fallback_reason": "no_relevant_content" if fallback_needed else ""
+        "answer": answer,
+        "sources": list(dict.fromkeys(c["page"] for c in context)),
+        "fallback_needed": not has_answer,
+        "fallback_reason": "" if has_answer else "no_relevant_content",
     }
 
 
