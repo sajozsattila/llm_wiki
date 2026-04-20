@@ -249,6 +249,7 @@ def router_node(state: MainState) -> MainState:
     query = state["query"]
     wiki_result = run_wiki_query(query)
     return {
+        **state,
         "wiki_result": wiki_result,
     }
 
@@ -269,6 +270,7 @@ Question: {query}
 Provide a helpful and accurate answer."""
     answer = generate_with_llm(prompt)
     return {
+        **state,
         "raw_answer": answer,
     }
 
@@ -282,6 +284,7 @@ def finalize_answer(state: MainState) -> MainState:
         }
     else:
         return {
+            **state,
             "final_answer": wiki_result.get("answer", ""),
             "sources": wiki_result.get("sources", []),
         }
