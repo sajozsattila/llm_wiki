@@ -8,7 +8,6 @@ from langgraph.graph import StateGraph, END
 
 from utils import (
     WikiState,
-    get_wiki_path,
     read_wiki_page,
     extract_wiki_links,
     extract_title,
@@ -81,7 +80,7 @@ def extract_concepts(query: str) -> list[str]:
                     "each", "few", "more", "most", "other", "some", "such",
                     "no", "nor", "not", "only", "own", "same", "so", "than",
                     "too", "very", "what", "which", "who", "whom", "this",
-                    "that", "these", "those", "ami", "van", "a", "az", "egy",
+                    "that", "these", "those", "ami", "van", "az", "egy",
                     "nem", "és", "vagy", "de", "ha", "akkor", "mert", "mi",
                     "ki", "hol", "mikor", "miért", "hogy"}
     words = re.findall(r"\b[a-zA-ZáéíóúőüÖÜ]+\b", query.lower())
@@ -108,7 +107,10 @@ def wiki_traverse(state: WikiState) -> WikiState:
     pages_to_visit = [p for p in current_pages if p not in visited]
     
     all_links = []
-    for page in pages_to_visit[:max_hops - len(visited)]:
+    remaining = max(0, max_hops - len(visited))
+    for page in pages_to_visit[:remaining]:
+        if page in visited:
+            continue
         try:
             content = read_wiki_page(page)
             relevant = extract_relevant_passages(content, intent.get("query", ""))
@@ -126,7 +128,7 @@ def wiki_traverse(state: WikiState) -> WikiState:
             pass
         visited.append(page)
     
-    for link in all_links[:max_hops - len(visited)]:
+    for link in all_links[:remaining]:
         try:
             content = read_wiki_page(link)
             relevant = extract_relevant_passages(content, intent.get("query", ""))
@@ -178,7 +180,7 @@ Wiki Content:
 
 Provide a concise answer based on the wiki content above. Cite the sources you used."""
     answer = generate_with_llm(prompt)
-    sources = [c["page"] for c in context]
+    sources = list(set([c["page"] for c in context]))
     
     no_info_phrase = any(phrase in answer.lower() for phrase in [
         "does not contain",
