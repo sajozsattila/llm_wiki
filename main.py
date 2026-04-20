@@ -9,7 +9,7 @@ Run with: python main.py
 import argparse
 import sys
 
-from graph import run_wiki_query, wiki_subgraph
+from graph import run_main_query, wiki_subgraph
 
 
 def main():
@@ -38,11 +38,12 @@ def run_query(query: str, max_hops: int = 5):
     print(f"Max hops: {max_hops}")
     print(f"{'='*60}\n")
     
-    result = run_wiki_query(query, max_hops)
+    result = run_main_query(query, max_hops)
     
-    print(f"Answer:\n{result.get('answer', 'No answer generated')}\n")
+    print(f"Answer:\n{result.get('final_answer', result.get('answer', 'No answer generated'))}\n")
     print(f"Sources: {result.get('sources', [])}\n")
-    print(f"Visited pages: {result.get('visited_pages', [])}\n")
+    if result.get('wiki_result', {}).get('fallback_needed'):
+        print("(Note: Wiki had no relevant info, used raw LLM)\n")
     
     return result
 

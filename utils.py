@@ -55,6 +55,8 @@ class WikiState(TypedDict):
     answer: str
     should_continue: bool
     max_hops: int
+    fallback_needed: bool
+    fallback_reason: str
 
 
 def get_wiki_path() -> Path:

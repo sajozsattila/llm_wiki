@@ -162,6 +162,8 @@ def synthesize(state: WikiState) -> WikiState:
         return {
             "answer": "No relevant information found in the wiki.",
             "sources": [],
+            "fallback_needed": True,
+            "fallback_reason": "no_context_found",
         }
     context_text = "\n\n".join([
         f"## {c.get('title', c['page'])}\n{c.get('summary', '')}\n" + "\n".join(c.get("relevant", []))
@@ -177,7 +179,21 @@ Wiki Content:
 Provide a concise answer based on the wiki content above. Cite the sources you used."""
     answer = generate_with_llm(prompt)
     sources = [c["page"] for c in context]
-    return {"answer": answer, "sources": sources}
+    
+    no_info_phrase = any(phrase in answer.lower() for phrase in [
+        "does not contain",
+        "no relevant information",
+        "no information found",
+        "no information about",
+    ])
+    fallback_needed = no_info_phrase
+    
+    return {
+        "answer": answer, 
+        "sources": sources, 
+        "fallback_needed": fallback_needed,
+        "fallback_reason": "no_relevant_content" if fallback_needed else ""
+    }
 
 
 def create_wiki_graph():
@@ -212,6 +228,96 @@ def run_wiki_query(query: str, max_hops: int = 5) -> dict:
         "answer": "",
         "should_continue": True,
         "max_hops": max_hops,
+        "fallback_needed": False,
+        "fallback_reason": "",
     }
     result = wiki_subgraph.invoke(initial_state)
+    return result
+
+
+class MainState(TypedDict):
+    query: str
+    wiki_result: dict
+    raw_answer: str
+    final_answer: str
+    sources: list[str]
+
+
+def router_node(state: MainState) -> MainState:
+    query = state["query"]
+    wiki_result = run_wiki_query(query)
+    return {
+        "wiki_result": wiki_result,
+    }
+
+
+def should_use_wiki_fallback(state: MainState) -> str:
+    wiki_result = state.get("wiki_result", {})
+    if wiki_result.get("fallback_needed", False):
+        return "need_fallback"
+    return "wiki_success"
+
+
+def raw_synthesize_node(state: MainState) -> MainState:
+    query = state["query"]
+    prompt = f"""Answer the following question concisely:
+
+Question: {query}
+
+Provide a helpful and accurate answer."""
+    answer = generate_with_llm(prompt)
+    return {
+        "raw_answer": answer,
+    }
+
+
+def finalize_answer(state: MainState) -> MainState:
+    wiki_result = state.get("wiki_result", {})
+    if wiki_result.get("fallback_needed", False):
+        return {
+            "final_answer": state.get("raw_answer", ""),
+            "sources": [],
+        }
+    else:
+        return {
+            "final_answer": wiki_result.get("answer", ""),
+            "sources": wiki_result.get("sources", []),
+        }
+
+
+def create_main_graph():
+    main_graph = StateGraph(MainState)
+    
+    main_graph.add_node("router", router_node)
+    main_graph.add_node("raw_synthesize", raw_synthesize_node)
+    main_graph.add_node("finalize", finalize_answer)
+    
+    main_graph.add_conditional_edges(
+        "router",
+        should_use_wiki_fallback,
+        {
+            "need_fallback": "raw_synthesize",
+            "wiki_success": "finalize",
+        },
+    )
+    
+    main_graph.add_edge("raw_synthesize", "finalize")
+    main_graph.add_edge("finalize", END)
+    
+    main_graph.set_entry_point("router")
+    return main_graph.compile()
+
+
+main_subgraph = create_main_graph()
+
+
+def run_main_query(query: str, max_hops: int = 5) -> dict:
+    initial_state: MainState = {
+        "query": query,
+        "wiki_result": {},
+        "raw_answer": "",
+        "final_answer": "",
+        "sources": [],
+    }
+    result = main_subgraph.invoke(initial_state)
     return result
