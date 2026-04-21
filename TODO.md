@@ -90,3 +90,117 @@ Smaller, better-ordered prompt → more reliable navigation decisions.
 
 explicit in code, unlocks reverse-edge traversal (in-degree ranking), and cleanly
 separates what the graph knows (structure) from what the LLM decides (direction).
+
+### Two-tier wiki: concept pages and chunk pages
+
+#### The problem with the current raw fallback
+
+Right now the wiki has two disconnected layers:
+
+```
+Concept pages  (wiki/*.md)    ← agent navigates these
+Raw files      (raw/*.md)     ← agent only touches these in the RAW_FALLBACK node
+```
+
+`RAW_FALLBACK` is a hack to bridge this gap: when the concept pages don't contain
+enough detail, the agent switches to a completely different mechanism — extracting
+headings from raw files, asking the LLM which sections are relevant, then reading
+those sections. This is fragile and hard to maintain.
+
+#### The solution: chunks as first-class wiki pages
+
+Segment every raw source document by its Markdown heading hierarchy. Each segment
+becomes a **chunk page** — a normal wiki page that the agent navigates to like any
+other, but whose content is the raw source text rather than a human- or
+Claude-written summary.
+
+```
+Concept pages  (wiki/*.md)       ← agent navigates these
+Chunk pages    (wiki/*.md)       ← agent navigates these too
+```
+
+The graph becomes fully connected. `RAW_FALLBACK` is no longer needed.
+
+#### Chunk page format
+
+Each chunk page is a leaf node — it has content but links only back to its parent
+document summary page:
+
+```markdown
+# FABF v8 – 12.3. pont: Szankciók
+
+**Összefoglalás**: A FABF v8 feltételek szankciókra vonatkozó rendelkezései.
+**Forrás dokumentum**: AHE_43501_8_FABF_FINAL.md
+**chunk_id**: 47
+**Típus**: forrás-szegmens
+**Utolsó frissítés**: 2026-04-21
+
+---
+
+[raw section text here]
+
+## Kapcsolodó oldalak
+- [[ahe-43501-8-fabf]]
+```
+
+Naming convention: `<document-slug>-chunk-<zero-padded-id>.md`
+e.g. `ahe-43501-8-fabf-chunk-047.md`
+
+#### Graph shape with chunks
+
+Concept pages link down to chunk pages. Chunk pages link back up to their document
+summary page. This creates a clear hub-and-spoke structure per document:
+
+```
+[[allianz-szakmavedelem]]
+    └──► [[ahe-43501-8-fabf]]               (document summary page)
+              ├──► [[ahe-43501-8-fabf-chunk-001]]   (raw section, leaf)
+              ├──► [[ahe-43501-8-fabf-chunk-012]]
+              └──► [[ahe-43501-8-fabf-chunk-047]]
+```
+
+#### How the agent changes
+
+`PageMeta` gains an `is_chunk: bool` flag. The agent should not stop navigation
+until at least one chunk page has been visited — raw detail is always in the chunks,
+not in the concept pages.
+
+`FRONTIER_BUILDER` scores chunk pages higher when no chunk has been visited yet,
+steering navigation toward the raw text when needed. Once a chunk is reached, the
+normal `DONE` / continue decision applies.
+
+`RAW_FALLBACK` is removed entirely. What it did is now handled by normal graph
+navigation.
+
+#### Ingest workflow change
+
+When Claude Code ingests a new source document it must:
+
+1. Segment the raw file by Markdown heading hierarchy
+2. Assign a `chunk_id` to each segment (sequential, stable across re-ingests)
+3. Create one chunk page per segment in `wiki/`
+4. Add links from the document summary page to all its chunk pages
+5. Update `wiki/index.md` (chunk pages can be listed under their parent document)
+
+### Updated subgraph flow
+
+With chunk pages in place `RAW_FALLBACK` is removed. The flow becomes:
+
+```
+ENTRY ──► READ ──► FRONTIER_BUILDER ──► NAVIGATOR ──┐
+           ▲         (scores chunk pages             │
+           │          higher if none visited yet)    │
+           └─────────────────────────────────────────┘ (if not DONE)
+                                         │
+                                       DONE
+                                         │
+                                    SYNTHESIZE
+                                         │
+                                  CONFIDENCE_CHECK
+                                    │         │
+                               SUFFICIENT  INSUFFICIENT
+                                    │         │
+                                   END      END
+                                        (no more fallback —
+                                         chunks are in the graph)
+```
