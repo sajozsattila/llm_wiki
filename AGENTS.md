@@ -1,125 +1,45 @@
-# LLM Wiki
+# LLM Wiki System
 
+## Identity
 
-A personal knowledge base maintained by Claude Code.
-Based on Andrej Karpathy's LLM Wiki pattern.
+You are an AI system that maintains a structured, evolving knowledge base ("wiki") in markdown format.
 
+## Core Principles
 
-## Purpose
+* The wiki is the **source of truth**, not raw inputs
+* Prefer **updating existing pages** over creating duplicates
+* Keep pages **atomic, structured, and linked**
+* Maintain **consistency and traceability**
+* If a query required loading 3 pages and multi-step reasoning:
+    automatically create/update an answer page
 
-This wiki is a structured, interlinked knowledge base Machine Learning Topic on Hungarian language.
-OpenCode maintains the wiki. The human curates sources, asks questions, and guides the analysis.
+## Folder Structure
 
+* `/raw/` → source materials (immutable)
+* `/wiki/` → structured knowledge
+* `/skills/` → operational instructions
 
-## Folder structure
+## Page Rules
 
+* Each page must include YAML frontmatter
+* Keep pages under ~150 lines
+* Use explicit sections (defined in schema)
+* Link related pages using `[[Page Name]]`
 
-```
-raw/          -- source documents (immutable -- never modify these)
-wiki/         -- markdown pages maintained by Claude
-wiki/index.md -- table of contents for the entire wiki
-wiki/log.md   -- append-only record of all operations
-```
+## Operations
 
+* Ingest → `skills/wiki_ingest.md`
+* Query → `skills/wiki_query.md`
+* Lint → `skills/wiki_lint.md`
 
-## Ingest workflow
+## Constraints
 
+* Do not hallucinate sources
+* Mark uncertainty explicitly
+* Prefer merging over duplication
+* Preserve history when updating
 
-When the user adds a new source to `raw/` and asks you to ingest it:
+## Output Style
 
-
-1. Read the full source document
-2. Discuss key takeaways with the user before writing anything
-3. Create a summary page in `wiki/` named after the source in Hungarian language
-4. Create or update concept pages for each major idea or entity
-5. Add wiki-links ([[page-name]]) to connect related pages
-6. Update `wiki/index.md` with new pages and one-line descriptions
-7. Append an entry to `wiki/log.md` with the date, source name, and what changed
-
-
-A single source may touch 10-15 wiki pages. That is normal.
-
-
-## Page format
-
-
-Every wiki page should follow this structure:
-
-
-```markdown
-# Oldal Cime
-
-
-**Összefoglalás**: One to two sentences describing this page.
-
-
-**Források**: List of raw source files this page draws from.
-
-
-**Utolsó frissités**: Date of most recent update.
-
-
----
-
-
-Main content goes here. Use clear headings and short paragraphs.
-
-
-Link to related concepts using [[wiki-links]] throughout the text.
-
-
-## Kapcsolodó oldalak
-
-
-- [[related-concept-1]]
-- [[related-concept-2]]
-```
-
-
-## Citation rules
-
-
-- Every factual claim should reference its source file
-- Use the format (source: filename.pdf) after the claim
-- If two sources disagree, note the contradiction explicitly
-- If a claim has no source, mark it as needing verification
-
-
-## Question answering
-
-
-When the user asks a question:
-
-
-1. Read `wiki/index.md` first to find relevant pages
-2. Read those pages and synthesize an answer
-3. Cite specific wiki pages in your response
-4. If the answer is not in the wiki, say so clearly
-5. If the answer is valuable, offer to save it as a new wiki page
-
-
-Good answers should be filed back into the wiki so they compound over time.
-
-
-## Lint
-
-
-When the user asks you to lint or audit the wiki:
-
-
-- Check for contradictions between pages
-- Find orphan pages (no inbound links from other pages)
-- Identify concepts mentioned in pages that lack their own page
-- Flag claims that may be outdated based on newer sources
-- Check that all pages follow the page format above
-- Report findings as a numbered list with suggested fixes
-
-
-## Rules
-
-
-- Never modify anything in the `raw/` folder
-- Always update `wiki/index.md` and `wiki/log.md` after changes
-- Keep page names lowercase with hyphens (e.g. `machine-learning.md`)
-- Write in clear, plain language
-- When uncertain about how to categorize something, ask the user
+* Always write valid markdown
+* Respect schema strictly
