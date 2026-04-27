@@ -23,7 +23,7 @@ Prioritási sorrend:
 * MAX betöltendő oldal: **3**
 * MAX bejárási mélység: **2**
 * Összefoglalók előtérbe helyezése teljes tartalom helyett
-* SOHA ne escanneld végig a teljes wikit
+* SOHA ne olvasd végig végig a teljes wikit
 
 ---
 
@@ -110,7 +110,7 @@ Opcionális:
 ## 5. lépés — Válasz Szintetizálása
 
 * Kombinálj információt a kiválasztott oldalakból
-* A teljesség helyett a konzisztenciát részesítsd előfont
+* A teljesség helyett a konzisztenciát részesítsd előnyben
 * Oldd fel a kisebb konfliktusokat, ha lehetséges
 
 ---
@@ -151,13 +151,13 @@ Tartalmazza:
 * Légy tömör
 * Hivatkozz oldalnevekre (pl. [[LLM Wiki]])
 * NE hallucinálj
-* Részesítsd előfont a strukturált válaszokat
+* Részesítsd előnyben a strukturált válaszokat
 
 ---
 
 ## Teljesítmény Heurisztikák
 
-* 2 jó oldalt részesíts előfont 5 közepesnél
+* 2 jó oldalt részesíts előnyben 5 közepesnél
 * Kerüld a mély bejárási láncokat
 * Kerüld a nagy oldalak betöltését, hacsak nem szükséges
 * Állj meg korán, ha a confidence elegendő
