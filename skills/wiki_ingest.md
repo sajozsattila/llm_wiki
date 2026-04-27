@@ -1,42 +1,47 @@
-# Skill: Wiki Ingest
+# Skill: Wiki Betöltés
 
-## Goal
+## Cél
 
-Transform raw input into structured wiki knowledge.
+Nyers bemenet átalakítása strukturált wiki tudássá.
 
-## Steps
+## Lépések
 
-1. Check if relevant pages already exist in `/wiki/`
-2. If YES:
+1. Ellenőrizd, hogy léteznek-e releváns oldalak a `/wiki/` mappában
+2. Ha IGEN:
 
-   * Update existing pages
-   * Merge new information
-   * Update `updated` timestamp
-   * Adjust `confidence`
-3. If NO:
+   * Frissítsd a meglévő oldalakat
+   * Olvassz össze új információkat
+   * Frissítsd a `updated` időbélyeget
+   * Állítsd be a `confidence` értéket
+3. Ha NEM:
 
-   * Create a new page using the schema
+   * Hozz létre új oldalt a 'wiki/_meta/schema.md' séma alapján
 
-## Extraction Rules
+## Kinyerési szabályok
 
-* Extract atomic concepts
-* Avoid duplication
-* Split large topics into multiple pages
+* Atomikus fogalmak kinyerése
+* Duplikáció kerülése
+* Nagy témák felbontása több oldalra
+* Építsd be minden információt a nyers dokumentumokból
 
-## Writing Rules
+## Írási szabályok
 
-* Fill all required sections
-* Add links to related pages
-* Add sources in frontmatter + Sources section
+* Töltsd ki az összes kötelező szakaszt
+* Adj hozzá linkeket a kapcsolódó oldalakhoz
+* Adj hozzá forrásokat a frontmatterben + Források szakaszban
+* **YAML szigorú idézés**: Az összes string érték a frontmatterben DUPLA IDÉZŐJELBEN kell legyen
+  - `tags: ["statisztika", "delta-modszer"]`
+  - `sources: ["Sajó Zsolt Attila"]`
+  - Escape: `"` → `\"`, `\` → `\\`
 
-## Confidence Scoring
+## Confidence pontozás
 
-* 0.9–1.0 → well-established fact
-* 0.6–0.8 → likely correct
-* 0.3–0.5 → uncertain
-* <0.3 → speculative
+* 0.9–1.0 → jól megalapozott tény
+* 0.6–0.8 → valószínűleg helyes
+* 0.3–0.5 → bizonytalan
+* <0.3 → spekulatív
 
-## Output
+## Kimenet
 
-* Only write markdown files into `/wiki/`
-* Prefer updating over creating
+* Csak markdown fájlokat írj a `/wiki/` mappába
+* Frissítés preferálása létrehozás helyett

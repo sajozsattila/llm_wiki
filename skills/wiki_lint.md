@@ -1,43 +1,49 @@
-# Skill: Wiki Lint
+# Skill: Wiki Ellenőrzés
 
-## Goal
+## Cél
 
-Maintain quality and consistency of the wiki.
+A wiki minőségének és konzisztenciájának fenntartása.
 
-## Checks
+## Ellenőrzések
 
-### 1. Structural Validity
+### 1. Strukturális érvényesség
 
-* Has frontmatter?
-* Required fields present?
-* Valid types?
+* Van frontmatter?
+* A kötelező mezők jelen vannak?
+* Érvényes típusok?
 
-### 2. Consistency
+### 2. Konzisztencia
 
-* Conflicting statements across pages
-* Duplicate concepts
+* Ellentmondásos állítások az oldalak között
+* Duplikált fogalmak
 
-### 3. Linking
+### 3. Linkelés
 
-* Orphan pages (no incoming links)
-* Broken links
+* Árvák (bejövő link nélküli oldalak)
+* Hibás linkek
 
-### 4. Freshness
+### 4. Frissesség
 
-* Old pages → mark `stale: true`
+* Régi oldalak → `stale: true` jelölés
 
 ### 5. Confidence
 
-* Low confidence pages flagged
+* Alacsony confidence-jű oldalak jelölése
 
-## Actions
+### 6. YAML Formátum
 
-* Suggest merges
-* Suggest updates
-* Flag contradictions
-* Mark stale content
+* Az összes string érték duplas idézőjelben
+* Nincs escape-eletlen kettőspont az értékekben
+* Érvényes YAML szintaxis (parseolható)
 
-## Output
+## Műveletek
 
-* List of issues
-* Suggested fixes
+* Összefűzés javaslata
+* Frissítés javaslata
+* Ellentmondások jelölése
+* Elavult tartalom jelölése
+
+## Kimenet
+
+* Problémák listája
+* Javasolt javítások

@@ -1,185 +1,187 @@
-# Skill: Wiki Query
+# Skill: Wiki Lekérdezés
 
-## Goal
+## Cél
 
-Answer user queries using the wiki with **minimal latency and token usage**, while maintaining correctness.
-
----
-
-## Core Strategy
-
-Shift work from query-time → precomputed knowledge.
-
-Priority order:
-
-1. Precomputed answers (fastest)
-2. Summaries (cheap routing)
-3. Full pages (expensive, limited)
+A felhasználói lekérdezések megválaszolása a wiki használatával, **minimális késleltetés és token-használat** mellett, a helyesség megőrzése közben.
 
 ---
 
-## Hard Constraints
+## Alapstratégia
 
-* MAX pages to fully load: **3**
-* MAX traversal depth: **2**
-* Prefer summaries over full content
-* NEVER scan entire wiki
+A munkát áthelyezni: lekérdezési időből → előre kiszámított tudásba.
 
----
+Prioritási sorrend:
 
-## Step 0 — Normalize Query
-
-* Extract intent
-* Identify key entities / concepts
-* Generate 3–5 search keywords
+1. Előre kiszámított válaszok (leggyorsabb)
+2. Összefoglalók (olcsó útválasztás)
+3. Teljes oldalak (drága, korlátozott)
 
 ---
 
-## Step 1 — Check Answer Cache (FAQ Layer)
+## Kemény Korlátozások
 
-Search in:
+* MAX betöltendő oldal: **3**
+* MAX bejárási mélység: **2**
+* Összefoglalók előtérbe helyezése teljes tartalom helyett
+* SOHA ne escanneld végig a teljes wikit
+
+---
+
+## 0. lépés — Lekérdezés Normalizálása
+
+* Szándék kinyerése
+* Kulcs entitások / koncepciók azonosítása
+* 3–5 keresőkulcsszó generálása
+
+---
+
+## 1. lépés — Válasz Gyorsítótár Ellenőrzése (FAQ Réteg)
+
+Keresés itt:
 `/wiki/answers/`
 
-If a matching or similar question exists:
+Ha van egyező vagy hasonló kérdés:
 
-* Return the precomputed answer
-* Verify relevance quickly
-* STOP
+* Add vissza az előre kiszámított választ
+* Gyorsan ellenőrizd a relevanciát
+* ÁLLJ MEG
 
 ---
 
-## Step 2 — Fast Routing (Cheap Pass)
+## 2. lépés — Gyors Útválasztás (Olcsó Átmenet)
 
-Search ONLY:
+Csak itt KERESS:
 
 * Frontmatter
-* `## Retrieval Summary`
-* `_index.md` (if exists)
+* `## Lekérési Összefoglaló`
+* `_index.md` (ha létezik)
 
-Do NOT read full pages.
+NE olvass teljes oldalakat.
 
-Select:
+Válassz:
 
-* Top **2–4 candidate pages**
+* Top **2–4 jelölt oldal**
 
-Selection criteria:
+Kiválasztási kritériumok:
 
-* Keyword match
-* Tag match
-* High `confidence`
-* Low `stale`
-* High `centrality` (if available)
+* Kulcsszó egyezés
+* Címke egyezés
+* Magas `confidence`
+* Alacsony `stale`
+* Magas `centrality` (ha elérhető)
 
 ---
 
-## Step 3 — Shallow Read (Lazy Expansion)
+## 3. lépés — Felületes Olvasás (Lusta Kiterjesztés)
 
-From selected pages, read ONLY:
+A kiválasztott oldalakból, csak ezt OLVASD:
 
 * TL;DR
-* Key Points
-* Relationships
+* Kulcs Pontok
+* Kapcsolatok
 
-Do NOT read full page yet.
+Még NE olvass teljes oldalt.
 
-If answer is sufficient:
+Ha a válasz elegendő:
 
-* Generate response
-* STOP
-
----
-
-## Step 4 — Deep Read (Limited)
-
-If needed:
-
-* Load FULL content of max **3 pages**
-
-Prioritize:
-
-1. Highest relevance
-2. Highest confidence
-3. Most connected pages
-
-Optional:
-
-* Follow links (`[[...]]`) but ONLY one hop
+* Generálj választ
+* ÁLLJ MEG
 
 ---
 
-## Step 5 — Synthesize Answer
+## 4. lépés — Mély Olvasás (Korlátozott)
 
-* Combine information from selected pages
-* Prefer consistency over completeness
-* Resolve minor conflicts if possible
+Ha szükséges:
 
----
+* Töltsd be a teljes tartalmat max **3 oldalról**
 
-## Step 6 — Handle Gaps
+Prioritizálás:
 
-If information is missing:
+1. Legmagasabb relevancia
+2. Legmagasabb confidence
+3. Leginkább kapcsolódó oldalak
 
-* Say: "Not in wiki"
-* Suggest ingestion:
+Opcionális:
 
-  * New page
-  * Update existing page
+* Kövesd a linkeket (`[[...]]`) de CSAKA egy ugrásnyit
 
 ---
 
-## Step 7 — Optional Cache Write
+## 5. lépés — Válasz Szintetizálása
 
-If:
-
-* Query is likely to repeat
-* Answer required multi-step reasoning
-
-Then:
-
-* Create a new file in `/wiki/answers/`
-
-Include:
-
-* Question
-* Answer
-* Source pages
+* Kombinálj információt a kiválasztott oldalakból
+* A teljesség helyett a konzisztenciát részesítsd előfont
+* Oldd fel a kisebb konfliktusokat, ha lehetséges
 
 ---
 
-## Output Rules
+## 6. lépés — Hiányok Kezelése
 
-* Be concise
-* Reference page names (e.g. [[LLM Wiki]])
-* Do NOT hallucinate
-* Prefer structured answers
+Ha hiányzik az információ:
 
----
+* Mondd: "Nincs a wikiben"
+* Javasolj betöltést:
 
-## Performance Heuristics
-
-* Prefer 2 good pages over 5 mediocre ones
-* Avoid deep traversal chains
-* Avoid loading large pages unless necessary
-* Stop early when confidence is sufficient
+  * Új oldal
+  * Meglévő oldal frissítése
 
 ---
 
-## Failure Modes to Avoid
+## 7. lépés — Opcionális Gyorsítótár Írás
 
-* Reading entire wiki
-* Loading too many pages
-* Ignoring cached answers
-* Over-traversing links
-* Recomputing known answers
+Ha:
+
+* A lekérdezés valószínűleg ismétlődik
+* A válasz több lépéses következtetést igényelt
+
+Akkor:
+
+* Hozz létre új fájlt itt: `/wiki/answers/`
+
+Tartalmazza:
+
+* Kérdés
+* Válasz
+* Forrás oldalak
 
 ---
 
-## Mental Model
+## Kimeneti Szabályok
 
-You are not searching documents.
+* Légy tömör
+* Hivatkozz oldalnevekre (pl. [[LLM Wiki]])
+* NE hallucinálj
+* Részesítsd előfont a strukturált válaszokat
 
-You are:
-→ routing a query through a **precomputed knowledge graph**
+---
 
-Goal:
-→ find the shortest path to an answer
+## Teljesítmény Heurisztikák
+
+* 2 jó oldalt részesíts előfont 5 közepesnél
+* Kerüld a mély bejárási láncokat
+* Kerüld a nagy oldalak betöltését, hacsak nem szükséges
+* Állj meg korán, ha a confidence elegendő
+
+---
+
+## Kerülendő Hibamódok
+
+* A teljes wiki végigolvasása
+* Túl sok oldal betöltése
+* Gyorsítótárban lévő válaszok figyelmen kívül hagyása
+* Túl sok link bejárása
+* Ismert válaszok újraszámolása
+
+---
+
+## Mentális Modell
+
+Te nem dokumentumokat keresel.
+
+Te vagy:
+→ egy lekérdezés **előre kiszámított tudásgráfon** keresztül történő útválasztása
+
+Cél:
+→ találd meg a legrövidebb utat a válaszhoz
+
+(Vége a fájlnak - összesen 185 sor)
